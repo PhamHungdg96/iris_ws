@@ -1,0 +1,30 @@
+# IRIS - Specific .gitignore
+
+# Rust
+iris_core/target/
+
+# Flutter
+iris_flutter/build/
+iris_flutter/.dart_tool/
+iris_flutter/.flutter-plugins
+iris_flutter/.flutter-plugins-dependencies
+iris_flutter/.packages
+iris_flutter/.metadata
+
+# Native libraries (built)
+iris_flutter/native/*.so
+iris_flutter/native/*.dylib
+iris_flutter/native/*.dll
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Downloads directory
+iris_downloads/

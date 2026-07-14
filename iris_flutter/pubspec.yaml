@@ -1,0 +1,45 @@
+name: iris_flutter
+description: IRIS - LAN Screen & File Sharing
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # FFI bindings
+  ffi: ^2.1.0
+
+  # State management
+  provider: ^6.1.0
+
+  # Networking info
+  network_info_plus: ^5.0.0
+
+  # File picker
+  file_picker: ^8.0.0
+
+  # Path utilities
+  path_provider: ^2.1.0
+
+  # Permissions (Android)
+  permission_handler: ^11.3.0
+
+  # UI utilities
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: IRIS
+      fonts:
+        - asset: fonts/iris_icons.ttf

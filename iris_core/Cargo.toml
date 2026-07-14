@@ -1,0 +1,82 @@
+[package]
+name = "iris_core"
+version = "0.1.0"
+edition = "2021"
+description = "IRIS Core - LAN Screen & File Sharing Engine (UDP + TCP)"
+rust-version = "1.87"
+
+[lib]
+name = "iris_core"
+crate-type = ["cdylib", "staticlib", "lib"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# UDP/TCP transport
+socket2 = { version = "0.5", features = ["all"] }
+
+# Serialization for protocol messages
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bincode = "1"
+
+# mDNS / LAN discovery
+mdns-sd = "0.11"
+if-addrs = "0.13"
+
+# Video encoding
+# For screen sharing, we use a lightweight codec
+# Alternative: ffmpeg, but adds complexity
+image = "0.24"
+
+# Compression
+flate2 = "1"
+lz4_flex = "0.11"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# FFI support
+libc = "0.2"
+
+# Cryptography for optional encryption
+aes-gcm = "0.10"
+rand = "0.8"
+
+# FFI support utilities
+uuid = { version = "1", features = ["v4"] }
+base64 = "0.22"
+once_cell = "1"
+hostname = "0.4"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# H.264 video encoding (cross-platform software encoder)
+openh264 = { version = "0.6", features = ["source"] }
+
+# Screen capture (platform-specific) — MUST be at the end, after all general [dependencies]
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Com",
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-graphics = "0.23"
+core-foundation = "0.9"
+objc = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

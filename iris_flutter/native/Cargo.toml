@@ -1,0 +1,13 @@
+# IRIS Flutter - Native Rust FFI Bridge
+#
+# This file configures the Rust library as a Flutter FFI plugin.
+# The native library (iris_core) is loaded by the Dart FFI bindings.
+
+[package]
+name = "iris_flutter_native"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "iris_flutter_native"
+crate-type = ["cdylib"]
