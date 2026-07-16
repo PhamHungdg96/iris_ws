@@ -6,7 +6,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
-RUST_DIR="$PROJECT_ROOT/iris_core"
+RUST_DIR="$PROJECT_ROOT/iris_flutter/rust"
 
 echo "=== IRIS Build Script ==="
 echo "Project root: $PROJECT_ROOT"
@@ -40,7 +40,7 @@ case "$HOST_OS" in
     windows) LIB_EXT=".dll" ;;
 esac
 
-LIB_NAME="libiris_core$LIB_EXT"
+LIB_NAME="libiris_bridge$LIB_EXT"
 echo "Built: target/release/$LIB_NAME"
 
 # ── Copy to Flutter native directory ──
@@ -87,7 +87,7 @@ build_android() {
     for target in "${!TARGET_MAP[@]}"; do
         abi="${TARGET_MAP[$target]}"
         mkdir -p "$ANDROID_LIBS/$abi"
-        cp "target/$target/release/libiris_core.so" "$ANDROID_LIBS/$abi/"
+        cp "target/$target/release/libiris_bridge.so" "$ANDROID_LIBS/$abi/"
         echo "  Copied $target -> $ANDROID_LIBS/$abi/"
     done
 }

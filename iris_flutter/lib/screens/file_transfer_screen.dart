@@ -126,7 +126,7 @@ class _FileTransferScreenState extends State<FileTransferScreen> {
     setState(() {
       _activeTransfers.add(_TransferItem(
         fileName: 'example_document.pdf',
-        totalSize: 2_500_000,
+        totalSize: 2500000,
         progress: 0.0,
         status: TransferStatus.transferring,
       ));

@@ -1,0 +1,14 @@
+/Users/pamhug/work/PAM/iris_ws/iris_flutter/rust/target/release/deps/libserde-fb32e05df471c113.rmeta: /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/pamhug/work/PAM/iris_ws/iris_flutter/rust/target/release/build/serde-64c298a7f9e0bc91/out/private.rs
+
+/Users/pamhug/work/PAM/iris_ws/iris_flutter/rust/target/release/deps/libserde-fb32e05df471c113.rlib: /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/pamhug/work/PAM/iris_ws/iris_flutter/rust/target/release/build/serde-64c298a7f9e0bc91/out/private.rs
+
+/Users/pamhug/work/PAM/iris_ws/iris_flutter/rust/target/release/deps/serde-fb32e05df471c113.d: /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/pamhug/work/PAM/iris_ws/iris_flutter/rust/target/release/build/serde-64c298a7f9e0bc91/out/private.rs
+
+/Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/Users/pamhug/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/Users/pamhug/work/PAM/iris_ws/iris_flutter/rust/target/release/build/serde-64c298a7f9e0bc91/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/pamhug/work/PAM/iris_ws/iris_flutter/rust/target/release/build/serde-64c298a7f9e0bc91/out

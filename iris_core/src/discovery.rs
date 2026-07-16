@@ -17,6 +17,8 @@ pub struct DiscoveryService {
     daemon: ServiceDaemon,
     /// Service name used for our own advertisement
     our_service_name: String,
+    /// Our own device ID (to filter self from discovery)
+    our_device_id: String,
     /// Currently discovered devices (device_id -> DeviceInfo)
     devices: Arc<Mutex<HashMap<String, DeviceInfo>>>,
     /// Broadcast channel to notify Flutter UI of changes
@@ -32,7 +34,7 @@ pub enum DiscoveryEvent {
 
 impl DiscoveryService {
     /// Create and start the discovery service.
-    pub fn new(device_name: &str, _platform: &str) -> Result<Self> {
+    pub fn new(device_name: &str, _platform: &str, device_id: &str) -> Result<Self> {
         let daemon = ServiceDaemon::new()?;
         let our_service_name = format!("{}-{}", device_name, uuid_v4());
 
@@ -42,6 +44,7 @@ impl DiscoveryService {
         let service = Self {
             daemon,
             our_service_name,
+            our_device_id: device_id.to_string(),
             devices,
             device_tx,
         };
@@ -55,6 +58,7 @@ impl DiscoveryService {
         device_name: &str,
         platform: &str,
         tcp_port: u16,
+        udp_port: u16,
         device_id: &str,
     ) -> Result<()> {
         // Get local IP addresses
@@ -68,6 +72,8 @@ impl DiscoveryService {
         txt_properties.insert("version".to_string(), env!("CARGO_PKG_VERSION").to_string());
         txt_properties.insert("screen_share".to_string(), "true".to_string());
         txt_properties.insert("file_transfer".to_string(), "true".to_string());
+        txt_properties.insert("udp_port".to_string(), udp_port.to_string());
+        txt_properties.insert("tcp_port".to_string(), tcp_port.to_string());
 
         let service_info = ServiceInfo::new(
             MDNS_SERVICE_TYPE,
@@ -81,15 +87,19 @@ impl DiscoveryService {
 
         self.daemon.register(service_info)?;
 
-        // Start browsing
+        // Start browsing on a dedicated OS thread using blocking recv()
+        // (avoids tokio reactor issues with mdns-sd)
         let devices = self.devices.clone();
         let tx = self.device_tx.clone();
         let browser = self.daemon.browse(MDNS_SERVICE_TYPE)?;
 
-        tokio::spawn(async move {
+        std::thread::spawn(move || {
             loop {
-                match browser.recv_async().await {
-                    Ok(event) => {
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    browser.recv()
+                }));
+                match result {
+                    Ok(Ok(event)) => {
                         match event {
                             ServiceEvent::ServiceResolved(info) => {
                                 let device = service_info_to_device(&info);
@@ -131,9 +141,14 @@ impl DiscoveryService {
                             _ => {}
                         }
                     }
-                    Err(e) => {
+                    Ok(Err(e)) => {
                         warn!("mDNS browse error: {}", e);
                         break;
+                    }
+                    Err(_) => {
+                        warn!("mDNS browse panicked, restarting...");
+                        // Continue the loop, try again
+                        std::thread::sleep(std::time::Duration::from_secs(1));
                     }
                 }
             }
@@ -151,9 +166,15 @@ impl DiscoveryService {
         self.device_tx.subscribe()
     }
 
-    /// Get current list of discovered devices
+    /// Get current list of discovered devices (excluding self)
     pub fn get_devices(&self) -> Vec<DeviceInfo> {
-        self.devices.lock().unwrap().values().cloned().collect()
+        self.devices
+            .lock()
+            .unwrap()
+            .values()
+            .filter(|d| d.device_id != self.our_device_id)
+            .cloned()
+            .collect()
     }
 }
 
@@ -186,6 +207,21 @@ fn service_info_to_device(info: &ServiceInfo) -> Option<DeviceInfo> {
         .map(|v| v.val_str() == "true")
         .unwrap_or(true);
 
+    // Parse ports from TXT records (fall back to info port for tcp)
+    let tcp_port = props
+        .get("tcp_port")
+        .and_then(|v| v.val_str().parse::<u16>().ok())
+        .unwrap_or(info.get_port());
+    let udp_port = props
+        .get("udp_port")
+        .and_then(|v| v.val_str().parse::<u16>().ok())
+        .unwrap_or(21000);
+
+    // Build services list
+    let mut services = Vec::new();
+    if screen_share { services.push("screen_share".to_string()); }
+    if file_transfer { services.push("file_transfer".to_string()); }
+
     let ip_addresses: Vec<String> = info
         .get_addresses()
         .iter()
@@ -197,6 +233,9 @@ fn service_info_to_device(info: &ServiceInfo) -> Option<DeviceInfo> {
         device_name,
         platform,
         ip_addresses,
+        tcp_port,
+        udp_port,
+        services,
         capabilities: Capabilities {
             screen_share,
             file_transfer,

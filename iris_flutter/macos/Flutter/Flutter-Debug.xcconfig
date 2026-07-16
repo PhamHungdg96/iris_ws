@@ -1,0 +1,6 @@
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
+#include "ephemeral/Flutter-Generated.xcconfig"
+
+// IRIS Bridge - Link the Rust native library
+OTHER_LDFLAGS=$(inherited) -L$(PROJECT_DIR)/../native -liris_bridge
+LIBRARY_SEARCH_PATHS=$(inherited) $(PROJECT_DIR)/../native

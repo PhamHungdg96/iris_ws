@@ -128,6 +128,9 @@ pub struct DeviceInfo {
     pub device_name: String,
     pub platform: String,
     pub ip_addresses: Vec<String>,
+    pub tcp_port: u16,
+    pub udp_port: u16,
+    pub services: Vec<String>, // e.g. ["screen_share", "file_transfer"]
     pub capabilities: Capabilities,
 }
 

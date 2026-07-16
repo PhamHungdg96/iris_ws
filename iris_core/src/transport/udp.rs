@@ -5,7 +5,7 @@
 
 use crate::protocol::{FrameChunk, FrameEncoding, UdpMessage, UDP_PORT};
 use anyhow::{Context, Result};
-use log::{debug, trace};
+use log::{debug, info, trace};
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
 
@@ -15,27 +15,55 @@ const MAX_CHUNK_SIZE: usize = 1300;
 /// Socket buffer size for streaming (8 MB)
 const SOCKET_BUF_SIZE: usize = 8 * 1024 * 1024;
 
+/// How many ports to try if the default is in use
+const MAX_PORT_RETRIES: u16 = 100;
+
 pub struct UdpTransport {
     socket: UdpSocket,
     local_addr: SocketAddr,
 }
 
 impl UdpTransport {
-    /// Create a new UDP transport bound to the default port.
+    /// Create a new UDP transport, starting from the default port.
+    /// Falls back to next available port if default is in use.
     pub async fn bind() -> Result<Self> {
-        // Use socket2 for cross-platform buffer size configuration
-        let addr: std::net::SocketAddr = format!("0.0.0.0:{}", UDP_PORT).parse()?;
+        Self::bind_from(UDP_PORT).await
+    }
 
+    /// Create a new UDP transport starting from a specific port.
+    /// Auto-increments if the port is already in use.
+    pub async fn bind_from(start_port: u16) -> Result<Self> {
+        for offset in 0..MAX_PORT_RETRIES {
+            let port = start_port + offset;
+            let addr: std::net::SocketAddr = format!("0.0.0.0:{}", port).parse()?;
+
+            match Self::try_bind_addr(addr) {
+                Ok(transport) => {
+                    info!("UDP transport bound to port {}", port);
+                    return Ok(transport);
+                }
+                Err(e) if offset == 0 => {
+                    debug!("UDP port {} in use, trying next... ({})", port, e);
+                }
+                Err(_) => {
+                    // Continue trying next port
+                }
+            }
+        }
+        anyhow::bail!("Failed to bind UDP: all ports {}-{} are in use", start_port, start_port + MAX_PORT_RETRIES - 1)
+    }
+
+    fn try_bind_addr(addr: std::net::SocketAddr) -> Result<Self> {
         let socket2 = socket2::Socket::new(
             socket2::Domain::IPV4,
             socket2::Type::DGRAM,
             Some(socket2::Protocol::UDP),
         )?;
 
-        // Allow address reuse
         socket2.set_reuse_address(true)?;
+        #[cfg(any(target_os = "macos", target_os = "linux"))]
+        socket2.set_reuse_port(true)?;
 
-        // Increase buffer sizes for streaming (cross-platform)
         if let Err(e) = socket2.set_recv_buffer_size(SOCKET_BUF_SIZE) {
             debug!("Could not set recv buffer size: {}", e);
         }
@@ -46,16 +74,11 @@ impl UdpTransport {
         socket2.bind(&socket2::SockAddr::from(addr))?;
         socket2.set_nonblocking(true)?;
 
-        // Convert to tokio UdpSocket
         let std_socket: std::net::UdpSocket = socket2.into();
         let socket = UdpSocket::from_std(std_socket)?;
-
         let local_addr = socket.local_addr()?;
-        debug!("UDP transport bound to {}", local_addr);
-        Ok(Self {
-            socket,
-            local_addr,
-        })
+
+        Ok(Self { socket, local_addr })
     }
 
     /// Get local address

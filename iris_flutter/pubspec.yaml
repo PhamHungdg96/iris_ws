@@ -10,7 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # FFI bindings
+  # flutter_rust_bridge for type-safe Rust FFI
+  flutter_rust_bridge: ^2.9.0
   ffi: ^2.1.0
 
   # State management
@@ -38,8 +39,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  fonts:
-    - family: IRIS
-      fonts:
-        - asset: fonts/iris_icons.ttf

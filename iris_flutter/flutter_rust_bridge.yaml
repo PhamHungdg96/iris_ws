@@ -1,0 +1,5 @@
+# IRIS - flutter_rust_bridge configuration
+rust_input: rust/src/api/iris_api.rs
+dart_output: lib/bridge
+rust_root: rust/
+dart_root: lib/

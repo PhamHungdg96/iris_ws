@@ -94,18 +94,21 @@ pub extern "C" fn iris_start() -> *mut c_char {
 
         // Start UDP transport
         let udp = block_on(UdpTransport::bind())?;
+        let udp_port = udp.local_addr().port();
         engine.udp = Some(udp);
 
         // Start TCP transport
         let tcp = block_on(TcpTransport::bind())?;
+        let tcp_port = tcp.local_addr().port();
         engine.tcp = Some(tcp);
 
         // Start discovery
-        let discovery = DiscoveryService::new(&engine.device_name, &engine.platform)?;
+        let discovery = DiscoveryService::new(&engine.device_name, &engine.platform, &engine.device_id)?;
         discovery.start(
             &engine.device_name,
             &engine.platform,
-            crate::protocol::TCP_PORT,
+            tcp_port,
+            udp_port,
             &engine.device_id,
         )?;
         engine.discovery = Some(discovery);

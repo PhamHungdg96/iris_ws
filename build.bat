@@ -4,14 +4,14 @@ REM Compiles Rust core and prepares Flutter FFI integration.
 
 setlocal enabledelayedexpansion
 set "PROJECT_ROOT=%~dp0"
-set "RUST_DIR=%PROJECT_ROOT%iris_core"
+set "RUST_DIR=%PROJECT_ROOT%iris_flutter\rust"
 
 echo === IRIS Build Script (Windows) ===
 echo Project root: %PROJECT_ROOT%
 
 REM ── Build Rust core ──
 echo.
-echo --- Building iris_core (Rust) ---
+echo --- Building iris_bridge (Rust) ---
 cd /d "%RUST_DIR%"
 
 echo Building for Windows (MSVC)...
@@ -21,13 +21,13 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-echo Built: target\release\iris_core.dll
+echo Built: target\release\iris_bridge.dll
 
 REM ── Copy to Flutter native directory ──
 set "FLUTTER_NATIVE=%PROJECT_ROOT%iris_flutter\native"
 if not exist "%FLUTTER_NATIVE%" mkdir "%FLUTTER_NATIVE%"
-copy /Y "target\release\iris_core.dll" "%FLUTTER_NATIVE%\"
-echo Copied to: %FLUTTER_NATIVE%\iris_core.dll
+copy /Y "target\release\iris_bridge.dll" "%FLUTTER_NATIVE%\"
+echo Copied to: %FLUTTER_NATIVE%\iris_bridge.dll
 
 echo.
 echo === Build complete ===

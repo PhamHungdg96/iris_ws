@@ -11,6 +11,9 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 
+/// How many ports to try if the default is in use
+const MAX_PORT_RETRIES: u16 = 100;
+
 /// Manages TCP connections for control + file transfer
 pub struct TcpTransport {
     listener: TcpListener,
@@ -24,18 +27,38 @@ pub struct TcpConnection {
 }
 
 impl TcpTransport {
-    /// Create and bind TCP listener
+    /// Create and bind TCP listener on the default port.
+    /// Falls back to next available port if default is in use.
     pub async fn bind() -> Result<Self> {
-        let addr = format!("0.0.0.0:{}", TCP_PORT);
-        let listener = TcpListener::bind(&addr)
-            .await
-            .context("Failed to bind TCP listener")?;
-        let local_addr = listener.local_addr()?;
-        info!("TCP transport listening on {}", local_addr);
-        Ok(Self {
-            listener,
-            local_addr,
-        })
+        Self::bind_from(TCP_PORT).await
+    }
+
+    /// Create and bind TCP listener starting from a specific port.
+    /// Auto-increments if the port is already in use.
+    pub async fn bind_from(start_port: u16) -> Result<Self> {
+        for offset in 0..MAX_PORT_RETRIES {
+            let port = start_port + offset;
+            let addr = format!("0.0.0.0:{}", port);
+
+            match TcpListener::bind(&addr).await {
+                Ok(listener) => {
+                    let local_addr = listener.local_addr()?;
+                    info!("TCP transport listening on {}", local_addr);
+                    return Ok(Self { listener, local_addr });
+                }
+                Err(e) if offset == 0 => {
+                    debug!("TCP port {} in use, trying next... ({})", port, e);
+                }
+                Err(_) => {
+                    // Continue trying next port
+                }
+            }
+        }
+        anyhow::bail!(
+            "Failed to bind TCP: all ports {}-{} are in use",
+            start_port,
+            start_port + MAX_PORT_RETRIES - 1
+        )
     }
 
     /// Get local address

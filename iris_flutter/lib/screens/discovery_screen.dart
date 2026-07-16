@@ -8,7 +8,7 @@ import '../widgets/device_tile.dart';
 import 'screen_share_screen.dart';
 import 'file_transfer_screen.dart';
 
-/// Main screen: shows discovered LAN devices and connection options
+/// Main screen: device list + port configuration
 class DiscoveryScreen extends StatefulWidget {
   const DiscoveryScreen({super.key});
 
@@ -18,16 +18,15 @@ class DiscoveryScreen extends StatefulWidget {
 
 class _DiscoveryScreenState extends State<DiscoveryScreen> {
   Timer? _refreshTimer;
+  final _portController = TextEditingController(text: '21001');
 
   @override
   void initState() {
     super.initState();
-    // Auto-refresh device list every 3 seconds
     _refreshTimer = Timer.periodic(
       const Duration(seconds: 3),
       (_) => _refreshDevices(),
     );
-    // Initial refresh after build
     WidgetsBinding.instance.addPostFrameCallback((_) => _refreshDevices());
   }
 
@@ -38,11 +37,102 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _portController.dispose();
     super.dispose();
+  }
+
+  void _applyPort() {
+    final port = int.tryParse(_portController.text.trim());
+    if (port != null && port > 0 && port < 65536) {
+      context.read<IrisService>().restartWithPort(port);
+    }
+  }
+
+  void _showDeviceActions(DeviceInfo device) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.grey[600],
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(children: [
+              Icon(device.platformIcon, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(device.deviceName,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text('${device.primaryIp}:${device.tcpPort}',
+                        style: TextStyle(color: Colors.grey[400])),
+                  ],
+                ),
+              ),
+            ]),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.screen_share),
+              title: const Text('View Screen'),
+              subtitle: const Text('Watch remote screen via UDP stream'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _connectAndNavigate(device, ScreenShareScreen(device: device));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder),
+              title: const Text('Share Files'),
+              subtitle: const Text('Transfer files via TCP'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _connectAndNavigate(device, FileTransferScreen(device: device));
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _connectAndNavigate(DeviceInfo device, Widget screen) async {
+    final service = context.read<IrisService>();
+    final address = '${device.ipAddresses.first}:${device.tcpPort}';
+    final connected = await service.connectToDevice(address);
+    if (!mounted) return;
+    if (connected) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to connect to ${device.deviceName}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -52,33 +142,25 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
             floating: false,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
-              title: const Text(
-                'IRIS Share',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              title: const Text('IRIS Share',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.tertiary,
-                    ],
+                    colors: [theme.colorScheme.primary, theme.colorScheme.tertiary],
                   ),
                 ),
                 child: Center(
-                  child: Icon(
-                    Icons.share,
-                    size: 64,
-                    color: Colors.white.withOpacity(0.3),
-                  ),
+                  child: Icon(Icons.share, size: 64,
+                      color: Colors.white.withValues(alpha: 0.3)),
                 ),
               ),
             ),
           ),
 
-          // ── This Device Info ──
+          // ── This Device + Port Config ──
           SliverToBoxAdapter(
             child: Consumer<IrisService>(
               builder: (context, service, _) {
@@ -88,35 +170,6 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
-
-                if (service.error != null) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Card(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.warning_amber),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                service.error!,
-                                style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onErrorContainer,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }
-
                 return Card(
                   margin: const EdgeInsets.all(16),
                   child: Padding(
@@ -124,50 +177,55 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.desktop_windows,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'This Device',
+                        Row(children: [
+                          Icon(Icons.desktop_windows,
+                              color: theme.colorScheme.primary),
+                          const SizedBox(width: 12),
+                          const Text('This Device',
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: service.isRunning
-                                    ? Colors.green.withOpacity(0.2)
-                                    : Colors.orange.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                service.isRunning ? 'Online' : 'Starting...',
-                                style: TextStyle(
-                                  color: service.isRunning
-                                      ? Colors.green
-                                      : Colors.orange,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                                  fontSize: 16, fontWeight: FontWeight.w600)),
+                          const Spacer(),
+                          _statusBadge(service.isRunning),
+                        ]),
                         const SizedBox(height: 8),
-                        Text(
-                          'ID: ${service.deviceId}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
+                        Text('ID: ${service.deviceId}',
+                            style: theme.textTheme.bodySmall),
+                        const SizedBox(height: 12),
+                        // Port configuration
+                        Row(children: [
+                          const Icon(Icons.settings_ethernet, size: 18,
+                              color: Colors.grey),
+                          const SizedBox(width: 8),
+                          const Text('TCP Port:',
+                              style: TextStyle(fontSize: 13)),
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            width: 80,
+                            child: TextField(
+                              controller: _portController,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 8),
+                              ),
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            height: 32,
+                            child: FilledButton.icon(
+                              onPressed: _applyPort,
+                              icon: const Icon(Icons.refresh, size: 16),
+                              label: const Text('Apply', style: TextStyle(fontSize: 12)),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                              ),
+                            ),
+                          ),
+                        ]),
                       ],
                     ),
                   ),
@@ -176,32 +234,23 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
             ),
           ),
 
-          // ── Section Header ──
+          // ── Discovered Devices Header ──
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.devices,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Discovered Devices',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.refresh, size: 20),
-                    onPressed: _refreshDevices,
-                    tooltip: 'Refresh',
-                  ),
-                ],
-              ),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Row(children: [
+                Icon(Icons.devices, size: 20, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text('Discovered Devices',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600)),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 20),
+                  onPressed: _refreshDevices,
+                  tooltip: 'Refresh',
+                ),
+              ]),
             ),
           ),
 
@@ -209,43 +258,29 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
           Consumer<IrisService>(
             builder: (context, service, _) {
               final devices = service.devices;
-
               if (devices.isEmpty) {
                 return SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(48),
                     child: Center(
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.search_off,
-                            size: 48,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No devices found',
+                      child: Column(children: [
+                        Icon(Icons.search_off, size: 48,
+                            color: Colors.grey[600]),
+                        const SizedBox(height: 16),
+                        Text('No devices found',
                             style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Make sure other IRIS instances are running\non the same network',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
+                                color: Colors.grey[500], fontSize: 16)),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Run another IRIS instance on the same network',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                        ),
+                      ]),
                     ),
                   ),
                 );
               }
-
               return SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
@@ -260,123 +295,29 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
               );
             },
           ),
-
-          // Bottom padding
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 80),
-          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 80)),
         ],
       ),
     );
   }
 
-  void _showDeviceActions(DeviceInfo device) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  Widget _statusBadge(bool online) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: online
+            ? Colors.green.withValues(alpha: 0.2)
+            : Colors.orange.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
       ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[600],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Icon(device.platformIcon, size: 28),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        device.deviceName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        device.ipAddresses.isNotEmpty
-                            ? device.ipAddresses.first
-                            : 'No address',
-                        style: TextStyle(color: Colors.grey[400]),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 8),
-
-            // Screen Share option
-            ListTile(
-              leading: const Icon(Icons.screen_share),
-              title: const Text('View Screen'),
-              subtitle: const Text('Watch remote screen via UDP stream'),
-              onTap: () {
-                Navigator.pop(context);
-                _connectAndNavigate(
-                  device,
-                  ScreenShareScreen(device: device),
-                );
-              },
-            ),
-
-            // File Transfer option
-            ListTile(
-              leading: const Icon(Icons.folder),
-              title: const Text('Share Files'),
-              subtitle: const Text('Transfer files via TCP'),
-              onTap: () {
-                Navigator.pop(context);
-                _connectAndNavigate(
-                  device,
-                  FileTransferScreen(device: device),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
+      child: Text(
+        online ? 'Online' : 'Starting...',
+        style: TextStyle(
+          color: online ? Colors.green : Colors.orange,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
-  }
-
-  Future<void> _connectAndNavigate(
-      DeviceInfo device, Widget screen) async {
-    final service = context.read<IrisService>();
-    final address =
-        '${device.ipAddresses.first}:21001'; // TCP control port
-
-    final connected = await service.connectToDevice(address);
-
-    if (connected && mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => screen),
-      );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to connect to ${device.deviceName}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 }

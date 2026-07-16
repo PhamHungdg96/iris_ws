@@ -111,8 +111,8 @@ mod windows_capture {
 #[cfg(target_os = "macos")]
 mod macos_capture {
     use super::*;
-    use core_graphics::display::{CGDisplay, CGDisplayBounds};
-    use log::warn;
+    use anyhow::Context;
+    use core_graphics::display::CGDisplay;
 
     pub struct MacOsCapture {
         display: CGDisplay,
